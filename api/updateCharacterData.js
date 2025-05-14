@@ -1,4 +1,8 @@
 export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method Not Allowed" });
+  }
+
   const {
     PlayFabId,
     CharacterId,
@@ -7,9 +11,8 @@ export default async function handler(req, res) {
     SecretKey
   } = req.body;
 
-  const result = await fetch(
-    `https://${TitleId}.playfabapi.com/Server/UpdateCharacterData`,
-    {
+  try {
+    const result = await fetch(`https://${TitleId}.playfabapi.com/Server/UpdateCharacterData`, {
       method: "POST",
       headers: {
         "X-SecretKey": SecretKey,
@@ -20,9 +23,17 @@ export default async function handler(req, res) {
         CharacterId,
         Data
       })
-    }
-  );
+    });
 
-  const json = await result.json();
-  res.status(200).json(json);
+    const json = await result.json();
+
+    if (!result.ok) {
+      return res.status(result.status).json({ error: "PlayFab API failed", details: json });
+    }
+
+    return res.status(200).json(json);
+  } catch (error) {
+    console.error("PlayFab call failed:", error);
+    return res.status(500).json({ error: "Internal Server Error", message: error.message });
+  }
 }
